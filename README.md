@@ -2,9 +2,6 @@
 
 Workflow de n8n (`proyecto final`) que recibe pedidos de clientes por WhatsApp, arma un presupuesto consultando el catálogo de Airtable con un agente de IA (Claude Sonnet 5), lo deja pendiente de aprobación humana por Gmail, y responde al cliente por WhatsApp según el resultado.
 
-**Link a la base completa de airtable:** _[[completar](https://airtable.com/invite/l?inviteId=invDTR89ug0z4XlRT&inviteToken=dc7d9d94a0627ef21bbe989f1fe26ac161589190d1119cb35d32f686b53d6517&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts)]_
-
-
 
 ## Índice
 - [Arquitectura general](#arquitectura-general)
@@ -63,7 +60,7 @@ Base: **proyecto final AI Automation**
 | **Artículos** | Catálogo consultado por el AI Agent (tool `ARTICULOS`, operación `search`) para matchear cada ítem del pedido y calcular precios. | _[https://airtable.com/appYGsKIp7kY6uGPM/shrMMPyHQTU69VTG1]_ |
 | **Presupuestos** | Registro de cada presupuesto generado, con campos `N° de presupuesto`, `Fecha de creación`, `Cliente`, `Artículos`, `Total` y `Estado` (`Pendiente` / `Procesado por IA` / `Aprobado por humano` / `Rechazado por humano`). | _[https://airtable.com/appYGsKIp7kY6uGPM/shr7qjPmo18Qg9Kol]_ |
 
-**Link a la base completa:** _[[completar](https://airtable.com/invite/l?inviteId=invDTR89ug0z4XlRT&inviteToken=dc7d9d94a0627ef21bbe989f1fe26ac161589190d1119cb35d32f686b53d6517&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts)]_
+**Link a la base completa:** _[[https://airtable.com/invite/l?inviteId=invDTR89ug0z4XlRT&inviteToken=dc7d9d94a0627ef21bbe989f1fe26ac161589190d1119cb35d32f686b53d6517&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts)]]_
 
 > Los `base_id` (`appYGsKIp7kY6uGPM`) y `table_id` de cada tabla ya están cacheados en el JSON; si se reimporta el workflow en otra cuenta de Airtable, van a necesitar volver a mapearse.
 
