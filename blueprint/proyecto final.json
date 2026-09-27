@@ -1,0 +1,939 @@
+{
+  "name": "proyecto final",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "067b73fc-a532-4991-b808-b0bf77ef1f2f",
+      "name": "WhatsApp Trigger",
+      "webhookId": "cd8cfbd7-97ff-4a84-95a9-ac55ee62f4db",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "eNimA2XKjpwxPNXl",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messages[0].text.body }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# ROL\nSos el asistente de presupuestos. Recibís pedidos por WhatsApp escritos en lenguaje informal y armás un presupuesto consultando la tabla \"Articulos\" de Airtable.\n\n# INTERPRETACIÓN DEL PEDIDO\nel usuario te va a hacer el pedido  casi siempre de la siguiente manera:\n\n\"buenas! te puedo pedir 5 packs de coca, 5 packs de energizante de 250, 10 lavandinas de 1 litro\" \n\nvos tenes que armar el presupuesto mirando la cantidad, y la descripcion asi despues es mas facil para vos calcular el total de cada articulo para asi despues poder hacer la suma del total.\n\n# CONSULTA DE ARTÍCULOS\n- Tenés una tool que devuelve la lista completa de artículos de Airtable.\n- Llamala UNA SOLA VEZ, en el primer mensaje del pedido. La lista ya queda en el contexto.\n- Matcheá cada articulo pedido contra esa lista por descripcion + presentación + marca. Elegí la coincidencia más específica.\n- Si dos artículos son igual de plausibles, no adivines: marcá la ambigüedad para preguntar.\n- Si no hay coincidencia, marcalo NO ENCONTRADO y no lo cotices.\n- Nunca copies ni listes el catálogo en tu respuesta. Solo los ítems del pedido.\n\n# CÁLCULO\n- subtotal = precio del artículo × cantidad pedida, respetando la unidad de venta de Airtable.\n- Si el precio es por unidad y piden bultos, multiplicá por las unidades por bulto que figuran en el registro.\n- total = suma de subtotales, redondeado a 2 decimales.\n\n# ESTILO\n- Español rioplatense, cordial y breve. Sin emojis salvo que el usuario los use.\n- No expliques tu razonamiento ni describas las búsquedas que hiciste.\n- En \"mensaje\" usá solo formato de WhatsApp (*negrita*), nada de markdown."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "e7188e53-6543-438b-becd-700c272229e0",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.contacts[0].wa_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        192
+      ],
+      "id": "002f7209-5567-440c-a7cf-bafd99def30a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYGsKIp7kY6uGPM",
+          "mode": "list",
+          "cachedResultName": "proyecto final AI Automation",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblLoLBwP9fP8Z6UM",
+          "mode": "list",
+          "cachedResultName": "Artículos",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM/tblLoLBwP9fP8Z6UM"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        192
+      ],
+      "id": "bcc2ec27-848a-4307-ad52-498f6149e165",
+      "name": "ARTICULOS",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "amCNbWy91MxfxbUJ",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"usuario\": \"Juan Pérez\",\n  \"articulos\": [\n    {\"articulo\" : \"Cerveza negra 473 Dorada Sur\",\n    \"cantidad\": 5,\n      \"precio por bulto\": 2500,\n      \"subtotal\": 12500\n    }],\n  \"total\": 16700,\n  \"mensaje\": \"Hola Juan! Te paso el presupuesto...\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        512,
+        192
+      ],
+      "id": "8e75210c-49b4-4f3f-b767-fae65f2ae0c1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "06b9e3a1-56e7-40e7-be86-bc5eafefe26c",
+              "leftValue": "={{ $json.output.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        576,
+        -240
+      ],
+      "id": "abc343a1-25f9-48e6-bbbd-e6fd23540819",
+      "name": "el presupuesto es mayor a 0?"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appYGsKIp7kY6uGPM",
+          "mode": "list",
+          "cachedResultName": "proyecto final AI Automation",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnXJSCbNAlNs0jP",
+          "mode": "list",
+          "cachedResultName": "Presupuestos",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM/tblnXJSCbNAlNs0jP"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "N° de presupuesto": "={{ $('WhatsApp Trigger').item.json.messages[0].timestamp }}",
+            "Fecha de creación": "={{ $now }}",
+            "Total": "={{ $('AI Agent').item.json.output.total }}",
+            "Estado": "Procesado por IA",
+            "Cliente": "={{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }}",
+            "Artículos": "={{ $('AI Agent').item.json.output.articulos.map(a => `${a.cantidad} x ${a.articulo} - $${a['precio por bulto']} c/u = $${a.subtotal}`).join('\\n') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "N° de presupuesto",
+              "displayName": "N° de presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Artículos",
+              "displayName": "Artículos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "Procesado por IA",
+                  "value": "Procesado por IA"
+                },
+                {
+                  "name": "Aprobado por humano",
+                  "value": "Aprobado por humano"
+                },
+                {
+                  "name": "Rechazado por humano",
+                  "value": "Rechazado por humano"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Cliente",
+              "displayName": "Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -256
+      ],
+      "id": "1ed20469-7d5c-4dfd-8279-53cff1599d25",
+      "name": "PRESUPUESTO PROCESADO POR IA EN AIRTABLE",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "amCNbWy91MxfxbUJ",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "leospadavecchia96@gmail.com",
+        "subject": "=PRESUPUESTO  {{ $json.fields[\"N° de presupuesto\"] }}",
+        "message": "=el agente creo el siguiente presupuesto y necesita tu aprobacion:\n\ncreado:  {{ $json.fields[\"Fecha de creación\"] }}\n\ncliente: {{ $json.fields.Cliente }}\n\narticulos: {{ $json.fields[\"Artículos\"] }}\n\ntotal: ${{ $json.fields.Total }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "APROBAR",
+            "disapproveLabel": "RECHAZAR"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        -256
+      ],
+      "id": "40fbb38f-7dda-422c-8203-75a8ef6428ea",
+      "name": "presupuesto pendiente de aprobacion humana",
+      "webhookId": "1b335f70-0686-4dc4-bf6f-bc5bf252f4ed",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "SDBmMun1uQZmUlRL",
+          "name": "leospada96"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "db222350-50f9-48e0-9f7e-ef2859824de2",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        -256
+      ],
+      "id": "d8eb28cb-f8e0-45c0-991f-5f401a17356d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appYGsKIp7kY6uGPM",
+          "mode": "list",
+          "cachedResultName": "proyecto final AI Automation",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnXJSCbNAlNs0jP",
+          "mode": "list",
+          "cachedResultName": "Presupuestos",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM/tblnXJSCbNAlNs0jP"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('PRESUPUESTO PROCESADO POR IA EN AIRTABLE').item.json.id }}",
+            "Estado": "Aprobado por humano"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "N° de presupuesto",
+              "displayName": "N° de presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Artículos",
+              "displayName": "Artículos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Procesado por IA",
+                  "value": "Procesado por IA"
+                },
+                {
+                  "name": "Aprobado por humano",
+                  "value": "Aprobado por humano"
+                },
+                {
+                  "name": "Rechazado por humano",
+                  "value": "Rechazado por humano"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Cliente",
+              "displayName": "Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        -464
+      ],
+      "id": "7d642f09-fa10-4cc8-b954-86ee1e4f9c22",
+      "name": "actualiza el estado del presupuesto a APROBADO",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "amCNbWy91MxfxbUJ",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appYGsKIp7kY6uGPM",
+          "mode": "list",
+          "cachedResultName": "proyecto final AI Automation",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnXJSCbNAlNs0jP",
+          "mode": "list",
+          "cachedResultName": "Presupuestos",
+          "cachedResultUrl": "https://airtable.com/appYGsKIp7kY6uGPM/tblnXJSCbNAlNs0jP"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('PRESUPUESTO PROCESADO POR IA EN AIRTABLE').item.json.id }}",
+            "Estado": "Rechazado por humano"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "N° de presupuesto",
+              "displayName": "N° de presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fecha de creación",
+              "displayName": "Fecha de creación",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Artículos",
+              "displayName": "Artículos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Procesado por IA",
+                  "value": "Procesado por IA"
+                },
+                {
+                  "name": "Aprobado por humano",
+                  "value": "Aprobado por humano"
+                },
+                {
+                  "name": "Rechazado por humano",
+                  "value": "Rechazado por humano"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Cliente",
+              "displayName": "Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1520,
+        -240
+      ],
+      "id": "a31cdbd6-79d7-4032-9c49-cd60e7b9acac",
+      "name": "actualiza el estado del presupuesto a rechazado ",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "amCNbWy91MxfxbUJ",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1243963075470747",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id.startsWith('549') ? $('WhatsApp Trigger').item.json.contacts[0].wa_id.replace(/^549/, '54') : $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "=\nHola {{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }} aca te detallo el presupuesto que solicitaste.\n\n🧾 *Detalle*\n{{ $('actualiza el estado del presupuesto a APROBADO').item.json.fields[\"Artículos\"] }}\n\n💰 *TOTAL: ${{ $('actualiza el estado del presupuesto a APROBADO').item.json.fields.Total.format(\"es-AR\") }}*\n\n⏳ Presupuesto válido por 48 hs, sujeto a disponibilidad de stock.\n\n¡Gracias por su consulta! 🙌",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1696,
+        -464
+      ],
+      "id": "8dae0d42-3239-4f08-b418-511aa7b9bd58",
+      "name": "envia presupuesto al usuario",
+      "webhookId": "33ac9898-8056-4c6f-8961-aee5a1dcf8d2",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "cX0limKEjyBctfBL",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "=8821741721",
+        "text": "=el presupuesto  {{ $json.fields[\"N° de presupuesto\"] }}  fue rechazado ❌❌❌",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -240
+      ],
+      "id": "18633a82-8952-4e4a-8a65-599b3b62a7c4",
+      "name": "notifica al admin que el presupuesto solicitado fue rechazado",
+      "webhookId": "b73dbc9c-58bc-4300-93c5-f2a18c727e76",
+      "credentials": {
+        "telegramApi": {
+          "id": "jWdpU81Q2A0NIWcp",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "reintenta 3 veces. si falla, el workflow continua e indica que no pudo procesar la solicitud al mismo usuario que la genero\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        528,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "a98b0f45-ce44-40ea-ad22-b53869ed9a8a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        16,
+        224
+      ],
+      "id": "22067060-ffaf-4f26-9895-41a28143e722",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "pEGNiUpH1pDcd1t7",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1243963075470747",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id.startsWith('549') ? $('WhatsApp Trigger').item.json.contacts[0].wa_id.replace(/^549/, '54') : $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "= {{ $json.output.mensaje }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        -16
+      ],
+      "id": "1a02c12e-66c1-4f35-ace9-9a34fa88c1bd",
+      "name": "responde que no puede RESPONDER COSAS AJENAS A SU FUNCION",
+      "webhookId": "2271e2a8-cd47-4197-8835-79e635bad550",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "cX0limKEjyBctfBL",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "si le preguntan algo que no tenga relacion con la funcionalidad del agente",
+        "height": 112,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1040,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "8a3654ad-f775-4a09-996e-0379e5213af8",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1243963075470747",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id.startsWith('549') ? $('WhatsApp Trigger').item.json.contacts[0].wa_id.replace(/^549/, '54') : $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "no podemos procesar tu solicitud en este momento. por favor intenta ser mas claro a la hora de hacer un pedido.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        752,
+        144
+      ],
+      "id": "3dc42890-f7a4-4709-8b83-737cd89f4d8c",
+      "name": "responde que no puede procesar la solicitud",
+      "webhookId": "2271e2a8-cd47-4197-8835-79e635bad550",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "cX0limKEjyBctfBL",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ARTICULOS": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "el presupuesto es mayor a 0?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "responde que no puede procesar la solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "el presupuesto es mayor a 0?": {
+      "main": [
+        [
+          {
+            "node": "PRESUPUESTO PROCESADO POR IA EN AIRTABLE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "responde que no puede RESPONDER COSAS AJENAS A SU FUNCION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PRESUPUESTO PROCESADO POR IA EN AIRTABLE": {
+      "main": [
+        [
+          {
+            "node": "presupuesto pendiente de aprobacion humana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "presupuesto pendiente de aprobacion humana": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "actualiza el estado del presupuesto a APROBADO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "actualiza el estado del presupuesto a rechazado ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualiza el estado del presupuesto a APROBADO": {
+      "main": [
+        [
+          {
+            "node": "envia presupuesto al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "actualiza el estado del presupuesto a rechazado ": {
+      "main": [
+        [
+          {
+            "node": "notifica al admin que el presupuesto solicitado fue rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e26de223-63f9-4488-9181-6f2560689e38",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f4af2ac8717e153a7a035e190ea3c477922effa59a106fd72ceb63a5337616b3"
+  },
+  "nodeGroups": [],
+  "id": "AbDd41M5RlPjZ5m0",
+  "tags": []
+}
